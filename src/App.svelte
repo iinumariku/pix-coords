@@ -327,10 +327,10 @@
 
   function exportCSV() {
     if (coordList.length === 0) return;
-    const header = "#,Name,X,Y,Color";
+    const header = "ID,Name,X,Y";
     const rows = coordList.map((p, i) => {
       const name = p.name.includes(",") ? `"${p.name}"` : p.name;
-      return `${i + 1},${name},${p.x},${p.y},${p.color}`;
+      return `${i + 1},${name},${p.x},${p.y}`;
     });
     const csv = [header, ...rows].join("\n");
     downloadFile(csv, "coordinates.csv", "text/csv");
@@ -339,11 +339,10 @@
   function exportXLSX() {
     if (coordList.length === 0) return;
     const data = coordList.map((p, i) => ({
-      "#": i + 1,
+      ID: i + 1,
       Name: p.name,
       X: p.x,
       Y: p.y,
-      Color: p.color,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
