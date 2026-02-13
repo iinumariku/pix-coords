@@ -367,16 +367,14 @@
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = Math.min(Math.max(zoom * delta, 0.1), 50);
 
-    // Zoom towards mouse position
+    // Zoom towards mouse cursor position
     const rect = canvasEl.getBoundingClientRect();
     const cx = e.clientX - rect.left;
     const cy = e.clientY - rect.top;
 
-    const centerX = canvasEl.width / 2 + panX;
-    const centerY = canvasEl.height / 2 + panY;
-
-    panX = panX - (cx - canvasEl.width / 2) * (newZoom / zoom - 1);
-    panY = panY - (cy - canvasEl.height / 2) * (newZoom / zoom - 1);
+    const ratio = newZoom / zoom;
+    panX = ratio * panX + (cx - canvasEl.width / 2) * (1 - ratio);
+    panY = ratio * panY + (cy - canvasEl.height / 2) * (1 - ratio);
 
     zoom = newZoom;
     drawCanvas();
