@@ -334,8 +334,8 @@
       const name = p.name.includes(",") ? `"${p.name}"` : p.name;
       return `${i + 1},${name},${p.x},${p.y}`;
     });
-    const csv = [header, ...rows].join("\n");
-    downloadFile(csv, `${loadedFileName}.csv`, "text/csv");
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    downloadFile(csv, `${loadedFileName}.csv`, "text/csv;charset=utf-8");
   }
 
   function exportXLSX() {
