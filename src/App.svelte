@@ -498,10 +498,10 @@
             >
           </button>
         {/if}
-        <button class="btn-icon" onclick={resetView} title="Reset View">
+        <button class="btn-subtle" onclick={resetView} title="初期表示に戻す">
           <svg
-            width="16"
-            height="16"
+            width="15"
+            height="15"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -510,6 +510,7 @@
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
             <path d="M3 3v5h5" />
           </svg>
+          初期表示
         </button>
       {/if}
       <button class="btn-subtle" onclick={() => fileInputEl.click()}>
