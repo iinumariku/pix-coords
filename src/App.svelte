@@ -15,6 +15,7 @@
   let coordList = $state<CoordPoint[]>([]);
   let panelOpen = $state(true);
   let imageSrc = $state("");
+  let loadedFileName = $state("coordinates");
   let imageWidth = $state(0);
   let imageHeight = $state(0);
   let mouseX = $state(0);
@@ -92,6 +93,7 @@
   }
 
   function loadImage(file: File) {
+    loadedFileName = file.name.replace(/\.[^.]+$/, "");
     if (isTiff(file)) {
       loadTiff(file);
       return;
@@ -333,7 +335,7 @@
       return `${i + 1},${name},${p.x},${p.y}`;
     });
     const csv = [header, ...rows].join("\n");
-    downloadFile(csv, "coordinates.csv", "text/csv");
+    downloadFile(csv, `${loadedFileName}.csv`, "text/csv");
   }
 
   function exportXLSX() {
@@ -347,7 +349,7 @@
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Coordinates");
-    XLSX.writeFile(wb, "coordinates.xlsx");
+    XLSX.writeFile(wb, `${loadedFileName}.xlsx`);
   }
 
   function downloadFile(content: string, filename: string, type: string) {
