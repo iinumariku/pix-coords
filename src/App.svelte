@@ -1,6 +1,5 @@
 <script lang="ts">
   import * as UTIF from "utif2";
-  import * as XLSX from "xlsx";
 
   interface CoordPoint {
     id: number;
@@ -351,20 +350,6 @@
     });
     const csv = "\uFEFF" + [header, ...rows].join("\n");
     downloadFile(csv, `${loadedFileName}.csv`, "text/csv;charset=utf-8");
-  }
-
-  function exportXLSX() {
-    if (coordList.length === 0) return;
-    const data = coordList.map((p, i) => ({
-      ID: i + 1,
-      Name: p.name,
-      X: p.x,
-      Y: p.y,
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Coordinates");
-    XLSX.writeFile(wb, `${loadedFileName}.xlsx`);
   }
 
   function downloadFile(content: string, filename: string, type: string) {
@@ -766,24 +751,6 @@
               /><line x1="12" y1="15" x2="12" y2="3" /></svg
             >
             CSV
-          </button>
-          <button
-            class="btn-export btn-export-accent"
-            onclick={exportXLSX}
-            disabled={coordList.length === 0}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline
-                points="7,10 12,15 17,10"
-              /><line x1="12" y1="15" x2="12" y2="3" /></svg
-            >
-            XLSX
           </button>
         </div>
       </aside>
