@@ -54,7 +54,7 @@
     );
   }
 
-  function loadImageFromElement(img: HTMLImageElement) {
+  function loadImageFromElement(img: HTMLImageElement): void {
     imgEl = img;
     imageWidth = img.naturalWidth;
     imageHeight = img.naturalHeight;
@@ -93,7 +93,9 @@
   }
 
   function loadImage(file: File) {
-    loadedFileName = file.name.replace(/\.[^.]+$/, "");
+    loadedFileName = file.name
+      .replace(/\.[^.]+$/, "")
+      .replace(/[/\\<>:"|?*\x00-\x1f]/g, "_");
     if (isTiff(file)) {
       loadTiff(file);
       return;
@@ -327,12 +329,25 @@
     coordList = [];
   }
 
+  function escapeCSVField(field: string): string {
+    // Escape double quotes by doubling them
+    const escaped = field.replace(/"/g, '""');
+    // Wrap in quotes if the field contains comma, newline, or double quote
+    if (/[,"\n\r]/.test(field)) {
+      return `"${escaped}"`;
+    }
+    // CSV injection prevention: prefix with single quote if starts with =, +, -, @
+    if (/^[=+\-@]/.test(escaped)) {
+      return `"'${escaped}"`;
+    }
+    return escaped;
+  }
+
   function exportCSV() {
     if (coordList.length === 0) return;
     const header = "ID,Name,X,Y";
     const rows = coordList.map((p, i) => {
-      const name = p.name.includes(",") ? `"${p.name}"` : p.name;
-      return `${i + 1},${name},${p.x},${p.y}`;
+      return `${i + 1},${escapeCSVField(p.name)},${p.x},${p.y}`;
     });
     const csv = "\uFEFF" + [header, ...rows].join("\n");
     downloadFile(csv, `${loadedFileName}.csv`, "text/csv;charset=utf-8");
