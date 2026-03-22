@@ -34,6 +34,8 @@
   let panStartY = 0;
   let panStartPanX = 0;
   let panStartPanY = 0;
+  let didPanDrag = false;
+  const PAN_DRAG_THRESHOLD = 2;
 
   let canvasEl: HTMLCanvasElement;
   let containerEl: HTMLDivElement;
@@ -266,6 +268,11 @@
 
   function handleMouseMove(e: MouseEvent) {
     if (isPanning) {
+      const movedX = Math.abs(e.clientX - panStartX);
+      const movedY = Math.abs(e.clientY - panStartY);
+      if (movedX > PAN_DRAG_THRESHOLD || movedY > PAN_DRAG_THRESHOLD) {
+        didPanDrag = true;
+      }
       panX = panStartPanX + (e.clientX - panStartX);
       panY = panStartPanY + (e.clientY - panStartY);
       drawCanvas();
@@ -288,9 +295,10 @@
   }
 
   function handleMouseDown(e: MouseEvent) {
-    if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      // Middle click or Alt+click to pan
+    if (e.button === 0) {
+      // Click and drag to pan
       isPanning = true;
+      didPanDrag = false;
       panStartX = e.clientX;
       panStartY = e.clientY;
       panStartPanX = panX;
@@ -307,7 +315,11 @@
   }
 
   function handleClick(e: MouseEvent) {
-    if (!imageLoaded || e.altKey) return;
+    if (!imageLoaded) return;
+    if (didPanDrag) {
+      didPanDrag = false;
+      return;
+    }
     const coords = getImageCoords(e.clientX, e.clientY);
     if (coords) {
       const color = getPixelColor(coords.ix, coords.iy);
@@ -764,7 +776,7 @@
       <span class="separator">·</span>
       <span>スクロールでズーム</span>
       <span class="separator">·</span>
-      <span>Alt+ドラッグでパン</span>
+      <span>クリック+ドラッグでパン</span>
     </div>
   {/if}
 
