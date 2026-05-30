@@ -37,15 +37,15 @@
     let didPanDrag = false;
     const PAN_DRAG_THRESHOLD = 2;
 
-    // Middle-click zoom state
+    // Middle-click zoom state (Chrome auto-scroll style toggle)
     let isMiddleZooming = $state(false);
-    let middleZoomStartY = 0;
-    let middleZoomStartZoom = 1;
-    let middleZoomCenterX = 0;
-    let middleZoomCenterY = 0;
-    let middleZoomStartPanX = 0;
-    let middleZoomStartPanY = 0;
-    const MIDDLE_ZOOM_SENSITIVITY = 0.005;
+    let middleZoomAnchorY = 0;          // screen Y where mode was activated
+    let middleZoomCurrentY = 0;         // current mouse screen Y
+    let middleZoomCenterX = 0;          // canvas-relative zoom center X
+    let middleZoomCenterY = 0;          // canvas-relative zoom center Y
+    let middleZoomAnimId = 0;           // rAF handle
+    const MIDDLE_ZOOM_DEAD_ZONE = 5;    // px dead zone around anchor
+    const MIDDLE_ZOOM_SPEED = 0.0004;   // zoom rate per px² per frame
 
     let canvasEl: HTMLCanvasElement;
     let containerEl: HTMLDivElement;
@@ -281,26 +281,37 @@
         ctx.setLineDash([]);
     }
 
+    function startMiddleZoomLoop() {
+        function tick() {
+            if (!isMiddleZooming) return;
+            const dy = middleZoomAnchorY - middleZoomCurrentY; // up = positive = zoom in
+            if (Math.abs(dy) > MIDDLE_ZOOM_DEAD_ZONE) {
+                const adjusted = dy - Math.sign(dy) * MIDDLE_ZOOM_DEAD_ZONE;
+                const signedSquare = adjusted * Math.abs(adjusted);
+                const factor = Math.exp(signedSquare * MIDDLE_ZOOM_SPEED);
+                const newZoom = Math.min(Math.max(zoom * factor, 0.1), 50);
+
+                // Zoom towards the point where middle button was pressed
+                const ratio = newZoom / zoom;
+                panX = ratio * panX + middleZoomCenterX * (1 - ratio);
+                panY = ratio * panY + middleZoomCenterY * (1 - ratio);
+
+                zoom = newZoom;
+                drawCanvas();
+            }
+            middleZoomAnimId = requestAnimationFrame(tick);
+        }
+        middleZoomAnimId = requestAnimationFrame(tick);
+    }
+
+    function stopMiddleZoom() {
+        isMiddleZooming = false;
+        cancelAnimationFrame(middleZoomAnimId);
+    }
+
     function handleMouseMove(e: MouseEvent) {
         if (isMiddleZooming) {
-            const dy = middleZoomStartY - e.clientY; // up = positive = zoom in
-            // Accelerating zoom: use signed square for smooth feel
-            const signedSquare = dy * Math.abs(dy);
-            const factor = Math.exp(signedSquare * MIDDLE_ZOOM_SENSITIVITY);
-            const newZoom = Math.min(
-                Math.max(middleZoomStartZoom * factor, 0.1),
-                50,
-            );
-
-            // Zoom towards the point where middle button was pressed
-            const ratio = newZoom / middleZoomStartZoom;
-            panX =
-                ratio * middleZoomStartPanX + middleZoomCenterX * (1 - ratio);
-            panY =
-                ratio * middleZoomStartPanY + middleZoomCenterY * (1 - ratio);
-
-            zoom = newZoom;
-            drawCanvas();
+            middleZoomCurrentY = e.clientY;
             return;
         }
         if (isPanning) {
@@ -332,18 +343,21 @@
 
     function handleMouseDown(e: MouseEvent) {
         if (e.button === 1) {
-            // Middle-click: accelerating zoom
+            // Middle-click: toggle accelerating zoom mode
             e.preventDefault();
-            isMiddleZooming = true;
-            middleZoomStartY = e.clientY;
-            middleZoomStartZoom = zoom;
-            middleZoomStartPanX = panX;
-            middleZoomStartPanY = panY;
+            if (isMiddleZooming) {
+                stopMiddleZoom();
+            } else {
+                isMiddleZooming = true;
+                middleZoomAnchorY = e.clientY;
+                middleZoomCurrentY = e.clientY;
 
-            // Zoom center = canvas-relative position of middle click
-            const rect = canvasEl.getBoundingClientRect();
-            middleZoomCenterX = e.clientX - rect.left - canvasEl.width / 2;
-            middleZoomCenterY = e.clientY - rect.top - canvasEl.height / 2;
+                // Zoom center = canvas-relative position of middle click
+                const rect = canvasEl.getBoundingClientRect();
+                middleZoomCenterX = e.clientX - rect.left - canvasEl.width / 2;
+                middleZoomCenterY = e.clientY - rect.top - canvasEl.height / 2;
+                startMiddleZoomLoop();
+            }
             return;
         }
         if (e.button === 0) {
@@ -359,8 +373,8 @@
     }
 
     function handleMouseUp(e: MouseEvent) {
-        if (isMiddleZooming) {
-            isMiddleZooming = false;
+        if (e.button === 1) {
+            // Middle-click up: don't end zoom mode (it's toggle-based)
             return;
         }
         if (isPanning) {
@@ -466,6 +480,7 @@
 
     function handleMouseLeave() {
         isHovering = false;
+        if (isMiddleZooming) stopMiddleZoom();
         if (imageLoaded) drawCanvas();
     }
 
@@ -873,7 +888,7 @@
             <span class="separator">·</span>
             <span>スクロールでズーム</span>
             <span class="separator">·</span>
-            <span>中クリック+ドラッグでズーム</span>
+            <span>中クリックで加速ズーム（トグル）</span>
             <span class="separator">·</span>
             <span>クリック+ドラッグでパン</span>
         </div>
