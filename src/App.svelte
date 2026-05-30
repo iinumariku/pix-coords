@@ -952,6 +952,8 @@
             <span>中クリックで加速ズーム（トグル）</span>
             <span class="separator">·</span>
             <span>クリック+ドラッグでパン</span>
+            <span class="separator">·</span>
+            <span>ESCで初期表示</span>
         </div>
     {/if}
 
