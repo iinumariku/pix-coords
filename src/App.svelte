@@ -39,13 +39,13 @@
 
     // Middle-click zoom state (Chrome auto-scroll style toggle)
     let isMiddleZooming = $state(false);
-    let middleZoomAnchorY = 0;          // screen Y where mode was activated
-    let middleZoomCurrentY = 0;         // current mouse screen Y
-    let middleZoomCenterX = 0;          // canvas-relative zoom center X
-    let middleZoomCenterY = 0;          // canvas-relative zoom center Y
-    let middleZoomAnimId = 0;           // rAF handle
-    const MIDDLE_ZOOM_DEAD_ZONE = 5;    // px dead zone around anchor
-    const MIDDLE_ZOOM_SPEED = 0.0004;   // zoom rate per px² per frame
+    let middleZoomAnchorY = 0; // screen Y where mode was activated
+    let middleZoomCurrentY = 0; // current mouse screen Y
+    let middleZoomCenterX = 0; // canvas-relative zoom center X
+    let middleZoomCenterY = 0; // canvas-relative zoom center Y
+    let middleZoomAnimId = 0; // rAF handle
+    const MIDDLE_ZOOM_DEAD_ZONE = 5; // px dead zone around anchor
+    const MIDDLE_ZOOM_SPEED = 0.0004; // zoom rate per px² per frame
 
     let canvasEl: HTMLCanvasElement;
     let containerEl: HTMLDivElement;
