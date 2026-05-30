@@ -571,6 +571,21 @@
         drawCanvas();
     }
 
+    function handleKeyDown(e: KeyboardEvent) {
+        if (e.key !== "Escape" || !imageLoaded) return;
+        const target = e.target as HTMLElement | null;
+        const isEditing =
+            target instanceof HTMLInputElement ||
+            target instanceof HTMLTextAreaElement ||
+            target instanceof HTMLSelectElement ||
+            target?.isContentEditable;
+        if (isEditing) return;
+
+        if (isMiddleZooming) stopMiddleZoom();
+        isPanning = false;
+        resetView();
+    }
+
     function rgbToHex(r: number, g: number, b: number) {
         return (
             "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")
@@ -578,7 +593,7 @@
     }
 </script>
 
-<svelte:window onresize={handleResize} />
+<svelte:window onresize={handleResize} onkeydown={handleKeyDown} />
 
 <div class="app-layout">
     <!-- Header -->
