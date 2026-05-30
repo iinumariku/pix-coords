@@ -50,7 +50,8 @@
     let canvasEl: HTMLCanvasElement;
     let containerEl: HTMLDivElement;
     let magnifierCanvasEl: HTMLCanvasElement;
-    let imgEl: HTMLImageElement | null = null;
+    let imgEl: CanvasImageSource | null = null;
+    let imagePixelData: Uint8ClampedArray | null = null;
     let fileInputEl: HTMLInputElement;
 
     const MAGNIFIER_SIZE = 140;
@@ -65,11 +66,44 @@
         );
     }
 
-    function loadImageFromElement(img: HTMLImageElement): void {
-        imgEl = img;
-        imageWidth = img.naturalWidth;
-        imageHeight = img.naturalHeight;
-        imageSrc = img.src;
+    function releaseImageSource(): void {
+        if (
+            typeof ImageBitmap !== "undefined" &&
+            imgEl instanceof ImageBitmap
+        ) {
+            imgEl.close();
+        }
+        imgEl = null;
+        imagePixelData = null;
+    }
+
+    function createPixelDataFromImage(
+        img: CanvasImageSource,
+        w: number,
+        h: number,
+    ): Uint8ClampedArray | null {
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const ctx = tempCanvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return null;
+        ctx.drawImage(img, 0, 0, w, h);
+        return new Uint8ClampedArray(ctx.getImageData(0, 0, w, h).data);
+    }
+
+    function loadImageSource(
+        source: CanvasImageSource,
+        w: number,
+        h: number,
+        src = "",
+        pixelData: Uint8ClampedArray | null = null,
+    ): void {
+        releaseImageSource();
+        imgEl = source;
+        imageWidth = w;
+        imageHeight = h;
+        imageSrc = src;
+        imagePixelData = pixelData ?? createPixelDataFromImage(source, w, h);
         imageLoaded = true;
         zoom = 1;
         panX = 0;
@@ -77,30 +111,37 @@
         requestAnimationFrame(() => drawCanvas());
     }
 
-    function loadTiff(file: File) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const buf = e.target?.result as ArrayBuffer;
+    function loadImageFromElement(img: HTMLImageElement): void {
+        loadImageSource(img, img.naturalWidth, img.naturalHeight, img.src);
+    }
+
+    async function loadTiff(file: File) {
+        try {
+            const buf = await file.arrayBuffer();
             const ifds = UTIF.decode(buf);
             if (ifds.length === 0) return;
             UTIF.decodeImage(buf, ifds[0]);
             const rgba = UTIF.toRGBA8(ifds[0]);
             const w = ifds[0].width;
             const h = ifds[0].height;
+            const pixelData = new Uint8ClampedArray(rgba);
+            const imgData = new ImageData(pixelData, w, h);
 
-            const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = w;
-            tempCanvas.height = h;
-            const ctx = tempCanvas.getContext("2d")!;
-            const imgData = ctx.createImageData(w, h);
-            imgData.data.set(new Uint8ClampedArray(rgba.buffer));
-            ctx.putImageData(imgData, 0, 0);
+            if ("createImageBitmap" in window) {
+                const bitmap = await createImageBitmap(imgData);
+                loadImageSource(bitmap, w, h, "", pixelData);
+                return;
+            }
 
-            const img = new Image();
-            img.onload = () => loadImageFromElement(img);
-            img.src = tempCanvas.toDataURL();
-        };
-        reader.readAsArrayBuffer(file);
+            const sourceCanvas = document.createElement("canvas");
+            sourceCanvas.width = w;
+            sourceCanvas.height = h;
+            sourceCanvas.getContext("2d")?.putImageData(imgData, 0, 0);
+            loadImageSource(sourceCanvas, w, h, "", pixelData);
+        } catch (error) {
+            console.error("Failed to load TIFF", error);
+            showToast("TIFFの読み込みに失敗しました");
+        }
     }
 
     function loadImage(file: File) {
@@ -112,13 +153,18 @@
             return;
         }
         if (!file.type.startsWith("image/")) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => loadImageFromElement(img);
-            img.src = e.target?.result as string;
+
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            loadImageFromElement(img);
+            URL.revokeObjectURL(objectUrl);
         };
-        reader.readAsDataURL(file);
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            showToast("画像の読み込みに失敗しました");
+        };
+        img.src = objectUrl;
     }
 
     function drawCanvas() {
@@ -189,14 +235,14 @@
     }
 
     function getPixelColor(x: number, y: number) {
-        if (!imgEl) return { r: 0, g: 0, b: 0, a: 255 };
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = imageWidth;
-        tempCanvas.height = imageHeight;
-        const ctx = tempCanvas.getContext("2d")!;
-        ctx.drawImage(imgEl, 0, 0);
-        const data = ctx.getImageData(x, y, 1, 1).data;
-        return { r: data[0], g: data[1], b: data[2], a: data[3] };
+        if (!imagePixelData) return { r: 0, g: 0, b: 0, a: 255 };
+        const index = (y * imageWidth + x) * 4;
+        return {
+            r: imagePixelData[index],
+            g: imagePixelData[index + 1],
+            b: imagePixelData[index + 2],
+            a: imagePixelData[index + 3],
+        };
     }
 
     function drawMagnifier(ix: number, iy: number) {
